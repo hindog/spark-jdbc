@@ -6,10 +6,11 @@ scalaVersion := "2.11.12"
 
 libraryDependencies += "org.spark-project.hive" % "hive-jdbc" % "1.2.1.spark2"
 libraryDependencies += "org.apache.spark" %% "spark-hive" % "2.4.4"
-libraryDependencies += "org.jsoup" % "jsoup" % "1.12.1"
-libraryDependencies += "com.h2database" % "h2" % "1.4.200"
-libraryDependencies += "com.google.code.gson" % "gson" % "2.8.6"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.0"
+libraryDependencies += "com.h2database" % "h2" % "1.4.200" exclude("org.apache.commons", "commons-lang3")
+libraryDependencies += "com.google.code.gson" % "gson" % "2.8.6" exclude("org.apache.commons", "commons-lang3")
+libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.5"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.0" % "test"
+libraryDependencies += "org.jsoup" % "jsoup" % "1.12.1" % "test" // used to pull function definitions from API docs
 
 // Github Release
 ghreleaseRepoOrg := "hindog"

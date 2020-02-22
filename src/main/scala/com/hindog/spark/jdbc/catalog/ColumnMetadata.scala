@@ -1,12 +1,13 @@
 package com.hindog.spark.jdbc.catalog
 
 import java.sql.{Connection, DatabaseMetaData, ResultSet}
-
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.types.{DataType, IntegerType, NumericType, ShortType, StringType, StructField, StructType}
+import org.apache.spark.SparkException
 
 import scala.collection._
+import scala.util.control.NonFatal
 
 class ColumnMetadata(catalog: String, schemaPattern: String, tablePattern: String, columnPattern: String, conn: Connection) extends AbstractMetadata(conn) {
 
@@ -23,10 +24,11 @@ class ColumnMetadata(catalog: String, schemaPattern: String, tablePattern: Strin
         val columns = stmt.executeQuery(s"describe table $tableSchema.$table")
         var ordinal = 1
 
-        while (columns.next()) {
-          val jdbcType = JdbcType.apply(DataType.fromDDL(columns.getString("DATA_TYPE")))
-          val sparkType = jdbcType.toSparkType
-          val row = new GenericRowWithSchema(Array(
+        while (columns.next() && !columns.getString("col_name").startsWith("#")) {
+          try {
+            val jdbcType = JdbcType.apply(DataType.fromDDL(columns.getString("DATA_TYPE")))
+            val sparkType = jdbcType.toSparkType
+            val row = new GenericRowWithSchema(Array(
               tables.getString("TABLE_CAT"),
               tables.getString("TABLE_SCHEM"),
               tables.getString("TABLE_NAME"),
@@ -51,12 +53,13 @@ class ColumnMetadata(catalog: String, schemaPattern: String, tablePattern: Strin
               null,
               "NO",
               "NO"
-            ),
-            schema
-          )
+            ), schema)
 
-          ordinal += 1
-          rows += row
+            ordinal += 1
+            rows += row
+          } catch {
+            case NonFatal(ex) => throw new SparkException(s"Error retrieving metadata for column: ${tables.getString("TABLE_SCHEM")}.${table}.${columns.getString("col_name")} with type: ${columns.getString("DATA_TYPE")}", ex)
+          }
         }
       }
     }

@@ -1,8 +1,10 @@
 package com.hindog.spark.jdbc
 
-import java.net.URL
-import scala.collection.JavaConverters._
 import org.jsoup.Jsoup
+
+import scala.collection.JavaConverters._
+
+import java.net.URL
 
 object ExtractSparkFunctions extends App {
   val sparkVersion = "2.4.4"
