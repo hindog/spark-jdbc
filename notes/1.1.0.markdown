@@ -1,0 +1,7 @@
+## Spark JDBC 1.1.0 Release
+
+- Fix issue with Spark truncating the DDL of very large column types causing introspection exception
+- Return Spark's raw column type name in column metadata (but may be truncated by Spark) 
+- Allow root catalog name to be overridden using the `com.hindog.spark.jdbc.catalog.name` system property
+- Removed some unused code
+

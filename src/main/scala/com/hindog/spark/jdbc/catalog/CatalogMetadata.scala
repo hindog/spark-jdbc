@@ -1,11 +1,10 @@
 package com.hindog.spark.jdbc.catalog
 
-import java.sql.{Connection, ResultSet}
-
-import com.hindog.spark.jdbc.SparkConnection
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.expressions.{GenericRow, GenericRowWithSchema}
+import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
+
+import java.sql.{Connection, ResultSet}
 
 class CatalogMetadata(conn: Connection) extends AbstractMetadata(conn) {
   override def fetch() = {
@@ -22,5 +21,5 @@ class CatalogMetadata(conn: Connection) extends AbstractMetadata(conn) {
 }
 
 object CatalogMetadata {
-  def catalogName: String = "Spark"
+  def catalogName: String = sys.props.getOrElse("com.hindog.spark.jdbc.catalog.name", "Spark")
 }

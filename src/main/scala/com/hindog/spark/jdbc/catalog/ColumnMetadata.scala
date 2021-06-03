@@ -8,8 +8,15 @@ import org.apache.spark.SparkException
 
 import scala.collection._
 import scala.util.control.NonFatal
+import scala.util.matching.Regex
 
 class ColumnMetadata(catalog: String, schemaPattern: String, tablePattern: String, columnPattern: String, conn: Connection) extends AbstractMetadata(conn) {
+
+  // Used to fix column type DDL definitions when Spark truncates it due to excessive size.
+  // For example, it will add "... 5 more fields" for very large struct types and then we are unable to parse column DDL.
+  // This regex will remove that so that the type can be parsed, except without the additional columns.
+  // This doesn't really impact anything on the JDBC side since we don't return the full type, only the "top-level" type of a colunn
+  lazy val truncatedTypeRegex: Regex = "(.*),\\.\\.\\.\\s\\d+\\smore\\sfields(.*)".r
 
   override def fetch(): List[Row] = {
     if (isDebugEnabled) {
@@ -26,15 +33,25 @@ class ColumnMetadata(catalog: String, schemaPattern: String, tablePattern: Strin
 
         while (columns.next() && !columns.getString("col_name").startsWith("#")) {
           try {
-            val jdbcType = JdbcType.apply(DataType.fromDDL(columns.getString("DATA_TYPE")))
+            val rawDataType = columns.getString("DATA_TYPE")
+
+            // parse the Spark column DDL.  If the type was truncated due to size, we'll patch it up first
+            val dataType = truncatedTypeRegex.findFirstMatchIn(rawDataType) match {
+              case Some(m) => m.group(1) + m.group(2) // combine parts before and after the "... N more fields"
+              case None => rawDataType
+            }
+
+            val jdbcType = JdbcType.apply(DataType.fromDDL(dataType))
             val sparkType = jdbcType.toSparkType
+
+            // https://docs.oracle.com/javase/7/docs/api/java/sql/DatabaseMetaData.html#getColumns(java.lang.String,%20java.lang.String,%20java.lang.String,%20java.lang.String)
             val row = new GenericRowWithSchema(Array(
               tables.getString("TABLE_CAT"),
               tables.getString("TABLE_SCHEM"),
               tables.getString("TABLE_NAME"),
               columns.getString("col_name"),
               jdbcType.sqlType,
-              jdbcType.name,
+              rawDataType,
               sparkType.defaultSize,
               null,
               if (jdbcType.scale == 0) null else jdbcType.scale,
